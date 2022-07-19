@@ -26,11 +26,17 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.psql.job.container.image.repository }}:{{ .Values.psql.job.container.image.tag }}"
-          imagePullPolicy: {{ .Values.psql.job.container.image.pullPolicy  }}
+          imagePullPolicy: {{ .Values.psql.job.container.image.pullPolicy }}
           command: [{{ .Values.psql.job.container.command }}]
           env:
             - name: JENKINS_DB_BACKUP_NAME
-              value: {{ template "psql.backupName" . }}
+              value: {{ .Values.psql.jenkinsDbBackupName }}
+            - name: EBS_VOLUME_MOUNT_PATH
+              value: {{ .Values.psql.job.container.mountPath }}
+            - name: ACTION
+              value: {{ .Values.psql.job.action }}
+            - name: RANCHER_CLUSTER_PROJECT_NAME
+              value: "{{ .Values.psql.clusterName }}/{{ .Values.psql.projectNamespace }}"
           envFrom:
             - secretRef:
                 name: {{ .Values.psql.job.container.s3CredentialsSecret }}
@@ -41,6 +47,21 @@ spec:
               mountPath: {{ .Values.psql.job.container.mountPath }}
           resources:
             {{- toYaml .Values.psql.job.container.resources | nindent 12 }}
+      initContainers:
+        - name: {{ .Values.psql.job.initContainer.name }}
+          image: "{{ .Values.psql.job.initContainer.image.repository }}:{{ .Values.psql.job.initContainer.image.tag }}"
+          imagePullPolicy: {{ .Values.psql.job.initContainer.image.pullPolicy }}
+          # Change root owner of a mounted volume to postgres(1001) user
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              chown {{ .Values.psql.job.initContainer.postgresUserGroupId }} {{ .Values.psql.job.container.mountPath }}
+          volumeMounts:
+            - name: {{ .Values.psql.job.container.volumeName }}
+              mountPath: {{ .Values.psql.job.container.mountPath }}
+          resources:
+            {{- toYaml .Values.psql.job.initContainer.resources | nindent 12 }}
       volumes:
         - name: {{ .Values.psql.job.container.volumeName }}
           persistentVolumeClaim:
