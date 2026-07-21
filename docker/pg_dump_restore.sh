@@ -12,19 +12,52 @@ echo "DB database:    ${DB_DATABASE}"
 echo "=========================================="
 
 SQL_FILE="${EBS_VOLUME_MOUNT_PATH}/${DB_BACKUP_NAME}.sql"
-S3_PATH="s3://${S3_BACKUPS_BUCKET}/${S3_BACKUPS_DIRECTORY}/${DB_BACKUP_NAME}.sql"
+S3_PATH="s3://${S3_BACKUPS_BUCKET}/${S3_BACKUPS_DIRECTORY}/${DB_BACKUP_NAME}/${DB_BACKUP_NAME}.sql"
 
 if [ "$ACTION" = "backup" ]; then
 
-  echo "[backup] Running pg_dump..."
-  PGPASSWORD="${DB_PASSWORD}" pg_dump \
-    -h "${DB_HOST}" \
-    -U "${DB_USERNAME}" \
-    -p "${DB_PORT}" \
-    --dbname="${DB_DATABASE}" \
-    --no-password \
-    --format=plain \
-    --file="${SQL_FILE}"
+  echo "[backup] Terminating idle sessions holding exclusive locks..."
+  PGPASSWORD="${DB_PASSWORD}" psql -h "${DB_HOST}" -U "${DB_USERNAME}" -p "${DB_PORT}" -d "${DB_DATABASE}" -t -c "
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE state = 'idle in transaction'
+      AND query_start < now() - interval '30 seconds'
+      AND pid <> pg_backend_pid()
+      AND datname = '${DB_DATABASE}';
+  " 2>/dev/null || echo "[backup] No idle sessions to terminate"
+
+  MAX_RETRIES=3
+  RETRY_DELAY=30
+  PG_DUMP_OK=false
+
+  for i in $(seq 1 ${MAX_RETRIES}); do
+    echo "[backup] pg_dump attempt ${i}/${MAX_RETRIES}..."
+    set +e
+    PGPASSWORD="${DB_PASSWORD}" PGOPTIONS="-c lock_timeout=30" pg_dump \
+      -h "${DB_HOST}" \
+      -U "${DB_USERNAME}" \
+      -p "${DB_PORT}" \
+      --dbname="${DB_DATABASE}" \
+      --no-password \
+      --format=plain \
+      --file="${SQL_FILE}" 2>&1
+    RC=$?
+    set -e
+
+    if [ $RC -eq 0 ]; then
+      PG_DUMP_OK=true
+      break
+    fi
+
+    echo "[backup] pg_dump attempt ${i} failed (exit code ${RC}), waiting ${RETRY_DELAY}s before retry..."
+    rm -f "${SQL_FILE}" 2>/dev/null || true
+    sleep "${RETRY_DELAY}"
+  done
+
+  if [ "$PG_DUMP_OK" != "true" ]; then
+    echo "[backup] FATAL: All ${MAX_RETRIES} pg_dump attempts failed"
+    exit 1
+  fi
 
   echo "[backup] pg_dump completed successfully (size: $(wc -c < "${SQL_FILE}" | tr -d ' ') bytes)"
 
