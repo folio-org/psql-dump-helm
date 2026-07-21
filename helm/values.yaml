@@ -16,9 +16,9 @@ psql:
     initContainer:
       name: "init-chmod-data"
       image:
-        repository: "public.ecr.aws/bitnami/bitnami-shell"
+        repository: "732722833398.dkr.ecr.us-west-2.amazonaws.com/busybox"
         pullPolicy: Always
-        tag: "11-debian-11-r114"
+        tag: "latest"
       resources:
         limits:
           cpu: "400m"
