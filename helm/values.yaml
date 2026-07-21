@@ -26,13 +26,13 @@ psql:
         requests:
           cpu: "80m"
           memory: "400Mi"
-      postgresUserGroupId: "1001:1001"
+      postgresUserGroupId: "999:999"
       # Postgres User:GroupID that needs to have access to mounted volume, so, we grant the permissions using init container
     container:
       image:
         repository: "732722833398.dkr.ecr.us-west-2.amazonaws.com/psql-restore"
         pullPolicy: Always
-        tag: "latest"
+        tag: "16.8.0-1"
       # The below secret provided with every project deployment and give us such env variables:
       # AWS_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY that we use to do aws s3 cp operation
       ##

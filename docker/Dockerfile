@@ -1,4 +1,4 @@
-FROM docker.io/bitnami/postgresql:16.6.0
+FROM 732722833398.dkr.ecr.us-west-2.amazonaws.com/postgresql:16.8.0
 
 USER root
 
@@ -8,7 +8,6 @@ RUN apt update && apt install curl unzip jq -y \
     && rm -rf /aws/ awscliv2.zip
 
 COPY pg_dump_restore.sh /
-RUN chmod +x /pg_dump_restore.sh && chown 1001:1001 /pg_dump_restore.sh
+RUN chmod +x /pg_dump_restore.sh && chown postgres:postgres /pg_dump_restore.sh
 
-# 1001 is postgres user id
-USER 1001
+USER postgres

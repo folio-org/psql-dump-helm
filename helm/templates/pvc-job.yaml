@@ -65,12 +65,12 @@ spec:
         - name: {{ .Values.psql.job.initContainer.name }}
           image: "{{ .Values.psql.job.initContainer.image.repository }}:{{ .Values.psql.job.initContainer.image.tag }}"
           imagePullPolicy: {{ .Values.psql.job.initContainer.image.pullPolicy }}
-          # Change root owner of a mounted volume to postgres(1001) user
+          # Change root owner of a mounted volume to postgres user
           command:
             - /bin/sh
             - -ec
             - |
-              id -u; chown -R 1001:1001 /tmp/ebs-volume
+              id -u; chown -R {{ .Values.psql.job.initContainer.postgresUserGroupId }} {{ .Values.psql.job.container.mountPath }}
           volumeMounts:
             - name: {{ .Values.psql.job.container.volumeName }}
               mountPath: {{ .Values.psql.job.container.mountPath }}
