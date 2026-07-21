@@ -56,7 +56,7 @@ psql:
           memory: "1024Mi"
   pvc:
     name: "psql-backup-volume"
-    storageClassName: "gp2"
+    storageClassName: "gp3"
     storageSize: "100Gi"
 
 nameOverride: ""
