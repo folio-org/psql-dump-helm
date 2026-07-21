@@ -32,7 +32,7 @@ psql:
       image:
         repository: "732722833398.dkr.ecr.us-west-2.amazonaws.com/psql-restore"
         pullPolicy: Always
-        tag: "16.8.0-1"
+        tag: "16.8.0-2"
       # The below secret provided with every project deployment and give us such env variables:
       # AWS_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY that we use to do aws s3 cp operation
       ##
